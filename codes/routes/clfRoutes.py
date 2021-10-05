@@ -1,8 +1,9 @@
 import os
-from flask import current_app, Blueprint, g
+from flask import current_app, Blueprint
 from flask import request
 from flask import jsonify
-from bert2vec_model import load_model, predict_result
+from codes.api.bert2vec_model import predict_result
+from codes.api.clfApi import clf_sentences, doc_checkout
 
 clfApp = Blueprint('clf_blueprint', __name__)
 
@@ -54,35 +55,33 @@ def upload_file_and_predict():
 
     sentences = [sentence for doc in docs for sentence in doc]
     # 每次预测batch_limit数量的句子
-    start = 0
-    result = []
-    while len(sentences) - start > current_app.config['BATCH_LIMIT']:
-        result.extend(predict_result(current_app.net, current_app.tokenizer, sentences[start:start + current_app.config['BATCH_LIMIT']]))
-        start += current_app.config['BATCH_LIMIT']
-    result.extend(predict_result(current_app.net, current_app.tokenizer, sentences[start:len(sentences)]))
+    result = clf_sentences(sentences, current_app.config['BATCH_LIMIT'], current_app.net, current_app.tokenizer)
     # 重新转化为文章组织形式
     doc_labels = []
+    loss_types = []
+    not_sentences = []
     index = 0
     for i in range(len(docs)):
         doc_label = []
         for j in range(len(docs[i])):
-            doc_label.append(str(result[index]))
+            doc_label.append(result[index])
             index += 1
-        doc_labels.append(doc_label)
+        print(doc_label)
+        loss_type, not_sentence = doc_checkout(doc_label, current_app.config['LABELS'])
+        loss_types.append(list(map(str, loss_type)))
+        not_sentences.append(list(map(str, not_sentence)))
+        doc_labels.append(list(map(str, doc_label)))
     # 删除所有文件
     for file_name in doc_names:
         print("删除文件", os.path.join(current_app.config['UPLOAD_FOLDER'], file_name))
         if os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], file_name)):
             os.remove(os.path.join(current_app.config['UPLOAD_FOLDER'], file_name))
-    # 输出标签和内容
-    # for i in range(len(docs)):
-    #     print(doc_names[i]+":")
-    #     for j in range(len(docs[i])):
-    #         print("第", j, "段，标签为 ", doc_labels[i][j], ":", docs[i][j])
     result = {
         'file_name': doc_names,
         'file_labels': doc_labels,
-        'file_sentence': docs
+        'file_sentence': docs,
+        'file_loss_types': loss_types,
+        'file_not_sentences': not_sentences
     }
     print(result)
     return jsonify(result)

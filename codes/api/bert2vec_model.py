@@ -6,7 +6,7 @@ from transformers import BertModel, BertTokenizer, BertForSequenceClassification
 
 # 哈工大中文bert模型,最高支持512长度句子
 MODEL_NAME = "hfl/chinese-bert-wwm-ext"
-FINE_TUNING_MODEL_PATH = "codes/static/fine_tuning_model.model"
+FINE_TUNING_MODEL_PATH = "../static/fine_tuning_model.model"
 MAX_SEQ_LENGTH = 150
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -69,6 +69,7 @@ def predict_result(net, tokenizer, inputs, device=DEVICE):
     # 预测结果
     prediction = net(input_tokens_tensor, input_masks_tensor, input_type_ids_tensor).logits
     result = prediction.argmax(dim=1).cpu().detach().numpy()
+    net.train()
     torch.cuda.empty_cache()
     return result
 

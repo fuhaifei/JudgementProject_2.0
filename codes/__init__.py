@@ -1,8 +1,8 @@
-from flask import Flask, current_app
+from flask import Flask
 from flask_cors import CORS
 from settings.settings import Config
 from routes.clfRoutes import *
-from bert2vec_model import load_model
+from codes.api.bert2vec_model import load_model
 
 
 
